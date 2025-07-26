@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ativar Pet Pass</title>
   <style>
+    /* Tu CSS se mantiene sin cambios */
     body { font-family: Arial, sans-serif; padding: 20px; background: #f2f4f8; margin: 0; }
     header { text-align: center; margin-bottom: 20px; }
     header img { max-width: 160px; margin-top: 10px; }
@@ -19,17 +20,17 @@
 </head>
 <body>
 <header>
-  <img src="logo_petpass.png" alt="Pet Pass Logo" /> <!-- Asegúrate de tener este archivo de imagen -->
+  <img src="logo_petpass.png" alt="Pet Pass Logo" />
 </header>
-  <form id="petpassForm">
+  <!-- CAMBIO 1: El formulario ahora tiene un 'target' que apunta al iframe -->
+  <form id="petpassForm" method="POST" target="hidden_iframe">
     <h1>Ativar Pet Pass</h1>
 
+    <!-- Todos tus campos de formulario se mantienen igual -->
     <label>Número de Série (ex: PP-12345):</label>
     <input type="text" name="numero_serie" required pattern="PP-\d{5}" title="O formato deve ser PP- seguido por 5 números (ex: PP-12345)"/>
-
     <label>📸 Foto do Pet (Recomendado: imagem quadrada e leve):</label>
-    <input type="file" name="foto_pet" accept="image/*" required />
-
+    <input type="file" id="foto_pet_input" accept="image/*" required />
     <label>🐾 Nome do Pet:</label>
     <input type="text" name="nome_pet" required />
     <label>Espécie:</label>
@@ -43,10 +44,8 @@
     </select>
     <label>Cor:</label>
     <input type="text" name="cor" />
-
     <label>🚨 Alergias ou Intolerâncias:</label>
     <textarea name="alergias_observadas"></textarea>
-
     <label>👤 Nome do Tutor:</label>
     <input type="text" name="nome_tutor" required />
     <label>Telefone (com código de país e área, ex: 55119...):</label>
@@ -55,79 +54,76 @@
     <input type="email" name="email" />
     <label>Endereço (Referência aproximada):</label>
     <input type="text" name="endereco" />
-
     <label>💉 Vacinas (uma por linha):</label>
     <textarea name="vacinas"></textarea>
+
+    <!-- CAMBIO 2: Añadimos inputs ocultos para los datos que generará el script -->
+    <input type="hidden" name="foto_pet" id="foto_pet_base64" />
+    <input type="hidden" name="botao_whatsapp" id="botao_whatsapp" />
+    <input type="hidden" name="botao_localizacao" id="botao_localizacao" />
+    <input type="hidden" name="action" value="register" />
 
     <button type="submit" id="submitButton">Enviar</button>
     <div id="statusMessage" class="status-message"></div>
   </form>
 
+  <!-- CAMBIO 3: El iframe invisible donde se enviará el formulario -->
+  <iframe name="hidden_iframe" style="display:none;"></iframe>
+
   <script>
     const petpassForm = document.getElementById('petpassForm');
     const submitButton = document.getElementById('submitButton');
     const statusMessage = document.getElementById('statusMessage');
-    
-    // ESTA URL SERÁ REEMPLAZADA CUANDO TENGAMOS EL SCRIPT DE GOOGLE LISTO
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec"; // <-- Pega tu URL aquí
+
+    // CAMBIO 4: Asignamos la URL del script al 'action' del formulario
+    petpassForm.action = SCRIPT_URL;
 
     petpassForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-
-      submitButton.disabled = true;
-      statusMessage.textContent = 'Enviando dados, por favor aguarde...';
-
-      const fileInput = e.target.querySelector('input[name="foto_pet"]');
+      // La lógica ahora se centra en preparar los datos ANTES de que el formulario se envíe
+      
+      const fileInput = document.getElementById('foto_pet_input');
       const file = fileInput.files[0];
 
       if (!file) {
-        statusMessage.textContent = 'Erro: Por favor, selecione uma foto.';
-        submitButton.disabled = false;
-        return;
+          alert("Por favor, selecione uma foto.");
+          e.preventDefault(); // Detenemos el envío si no hay foto
+          return;
       }
       
+      submitButton.disabled = true;
+      statusMessage.textContent = 'Processando imagem e enviando dados...';
+      
+      const telefoneLimpo = petpassForm.telefone.value.replace(/\D/g, '');
+      document.getElementById('botao_whatsapp').value = `https://wa.me/${telefoneLimpo}?text=Olá! Encontrei seu pet!`;
+      document.getElementById('botao_localizacao').value = `https://petpassmg3d.github.io/petpass-localizacao/localizacao.html?numero=${telefoneLimpo}`;
+
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => {
-        const formData = new FormData(petpassForm);
-        const payload = Object.fromEntries(formData.entries());
 
-        // Reemplaza el objeto File con la cadena Base64 completa
-        payload.foto_pet = reader.result; 
+      // Usamos una Promesa para esperar a que la imagen se lea antes de enviar el formulario
+      const promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (error) => reject(error);
+      });
 
-        // Crea los botones dinámicamente
-        const telefoneLimpo = payload.telefone.replace(/\D/g, '');
-        payload.botao_whatsapp = `https://wa.me/${telefoneLimpo}?text=Olá! Encontrei seu pet!`;
-        payload.botao_localizacao = `https://petpassmg3d.github.io/petpass-localizacao/localizacao.html?numero=${telefoneLimpo}`;
-        
-        // Añade la acción para que el script sepa qué hacer
-        payload.action = "register";
+      promise.then(base64Image => {
+          // Guardamos el Base64 en el input oculto
+          document.getElementById('foto_pet_base64').value = base64Image;
+          
+          // El formulario ya está listo y se enviará automáticamente.
+          // Ahora solo gestionamos la UX.
+          statusMessage.textContent = '¡Registro enviado com sucesso! Redirecionando...';
+          setTimeout(() => {
+              window.top.location.href = 'pagina-de-sucesso.html';
+          }, 2000);
 
-        fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        })
-        .then(response => {
-           // En este punto, no nos importa la respuesta para evitar problemas de CORS.
-           // La redirección manejará la experiencia del usuario.
-           // El script de Google devolverá un comando de redirección.
-           // Si el navegador no lo ejecuta (por seguridad), al menos el usuario no ve un error de red.
-           statusMessage.textContent = 'Processamento finalizado. Redirecionando...';
-           // Redirección manual por si la del script falla.
-           window.top.location.href = 'pagina-de-sucesso.html'; // <-- Debes crear esta página.
-        })
-        .catch(err => {
-          console.error("Erro no fetch:", err);
-          statusMessage.textContent = 'Ocorreu um erro. Por favor, tente novamente.';
+      }).catch(error => {
+          console.error("Erro ao processar a imagem:", error);
+          statusMessage.textContent = 'Erro ao processar a imagem.';
           submitButton.disabled = false;
-        });
-      };
-      
-      reader.onerror = error => {
-        console.error("Erro ao ler o arquivo:", error);
-        statusMessage.textContent = 'Erro ao processar a imagem.';
-        submitButton.disabled = false;
-      };
+          e.preventDefault(); // Detenemos el envío si la imagen falla
+      });
     });
   </script>
 </body>

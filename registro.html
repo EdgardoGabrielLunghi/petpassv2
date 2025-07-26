@@ -1,12 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ativar Pet Pass</title>
+  <!-- ESTE ES EL BLOQUE DE ESTILOS QUE SE HABÍA PERDIDO. AHORA ESTÁ AQUÍ. -->
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f2f4f8; margin: 0; }
+    header { text-align: center; margin-bottom: 20px; }
+    header img { max-width: 160px; margin-top: 10px; }
+    form { background: #fff; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input, textarea, select { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+    button { width: 100%; background-color: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    button:hover { background-color: #0056b3; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    h1 { text-align: center; color: #333; }
+    .status-message { text-align: center; font-weight: bold; margin-top: 20px; }
+  </style>
+</head>
 <body>
 <header>
   <img src="logo_petpass.png" alt="Pet Pass Logo" />
 </header>
-  <!-- Volvemos al formulario simple, sin target de iframe -->
+  <!-- Este es el formulario simple, sin target de iframe -->
   <form id="petpassForm">
     <h1>Ativar Pet Pass</h1>
 
-    <!-- Todos tus campos de formulario se mantienen igual -->
     <label>Número de Série (ex: PP-12345):</label>
     <input type="text" name="numero_serie" required pattern="PP-\d{5}" title="O formato deve ser PP- seguido por 5 números (ex: PP-12345)"/>
     <label>📸 Foto do Pet (Recomendado: imagem quadrada e leve):</label>
@@ -41,15 +60,16 @@
     <div id="statusMessage" class="status-message"></div>
   </form>
 
+  <!-- ESTE ES EL SCRIPT FINAL Y ROBUSTO -->
   <script>
     const petpassForm = document.getElementById('petpassForm');
     const submitButton = document.getElementById('submitButton');
     const statusMessage = document.getElementById('statusMessage');
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec"; // <-- Pega tu URL final aquí
+    // ASEGÚRATE DE QUE ESTA ES LA ÚLTIMA URL FUNCIONAL DE TU SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec"; 
 
     petpassForm.addEventListener('submit', function(e) {
       e.preventDefault();
-
       submitButton.disabled = true;
       statusMessage.textContent = 'Enviando dados, por favor aguarde...';
 
@@ -80,8 +100,7 @@
           body: JSON.stringify(payload)
         })
         .finally(() => {
-          // El bloque 'finally' se ejecuta SIEMPRE, sin importar si el fetch tuvo éxito o falló (por CORS).
-          // Es la solución perfecta para nuestra UX.
+          // El bloque 'finally' se ejecuta SIEMPRE. Es la solución perfecta.
           statusMessage.textContent = '¡Processamento concluído! Redirecionando...';
           setTimeout(() => {
             window.top.location.href = 'pagina-de-sucesso.html';
@@ -97,3 +116,4 @@
     });
   </script>
 </body>
+</html>

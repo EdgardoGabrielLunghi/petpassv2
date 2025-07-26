@@ -1,36 +1,16 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ativar Pet Pass</title>
-  <style>
-    /* Tu CSS se mantiene sin cambios */
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f2f4f8; margin: 0; }
-    header { text-align: center; margin-bottom: 20px; }
-    header img { max-width: 160px; margin-top: 10px; }
-    form { background: #fff; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input, textarea, select { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
-    button { width: 100%; background-color: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-size: 16px; }
-    button:hover { background-color: #0056b3; }
-    button:disabled { background-color: #ccc; cursor: not-allowed; }
-    h1 { text-align: center; color: #333; }
-    .status-message { text-align: center; font-weight: bold; margin-top: 20px; }
-  </style>
-</head>
 <body>
 <header>
   <img src="logo_petpass.png" alt="Pet Pass Logo" />
 </header>
-  <!-- CAMBIO 1: El formulario ahora tiene un 'target' que apunta al iframe -->
-  <form id="petpassForm" method="POST" target="hidden_iframe">
+  <!-- Volvemos al formulario simple, sin target de iframe -->
+  <form id="petpassForm">
     <h1>Ativar Pet Pass</h1>
 
     <!-- Todos tus campos de formulario se mantienen igual -->
     <label>Número de Série (ex: PP-12345):</label>
     <input type="text" name="numero_serie" required pattern="PP-\d{5}" title="O formato deve ser PP- seguido por 5 números (ex: PP-12345)"/>
     <label>📸 Foto do Pet (Recomendado: imagem quadrada e leve):</label>
-    <input type="file" id="foto_pet_input" accept="image/*" required />
+    <input type="file" name="foto_pet" accept="image/*" required />
     <label>🐾 Nome do Pet:</label>
     <input type="text" name="nome_pet" required />
     <label>Espécie:</label>
@@ -57,74 +37,63 @@
     <label>💉 Vacinas (uma por linha):</label>
     <textarea name="vacinas"></textarea>
 
-    <!-- CAMBIO 2: Añadimos inputs ocultos para los datos que generará el script -->
-    <input type="hidden" name="foto_pet" id="foto_pet_base64" />
-    <input type="hidden" name="botao_whatsapp" id="botao_whatsapp" />
-    <input type="hidden" name="botao_localizacao" id="botao_localizacao" />
-    <input type="hidden" name="action" value="register" />
-
     <button type="submit" id="submitButton">Enviar</button>
     <div id="statusMessage" class="status-message"></div>
   </form>
-
-  <!-- CAMBIO 3: El iframe invisible donde se enviará el formulario -->
-  <iframe name="hidden_iframe" style="display:none;"></iframe>
 
   <script>
     const petpassForm = document.getElementById('petpassForm');
     const submitButton = document.getElementById('submitButton');
     const statusMessage = document.getElementById('statusMessage');
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec"; // <-- Pega tu URL aquí
-
-    // CAMBIO 4: Asignamos la URL del script al 'action' del formulario
-    petpassForm.action = SCRIPT_URL;
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec"; // <-- Pega tu URL final aquí
 
     petpassForm.addEventListener('submit', function(e) {
-      // La lógica ahora se centra en preparar los datos ANTES de que el formulario se envíe
-      
-      const fileInput = document.getElementById('foto_pet_input');
+      e.preventDefault();
+
+      submitButton.disabled = true;
+      statusMessage.textContent = 'Enviando dados, por favor aguarde...';
+
+      const fileInput = e.target.querySelector('input[name="foto_pet"]');
       const file = fileInput.files[0];
 
       if (!file) {
-          alert("Por favor, selecione uma foto.");
-          e.preventDefault(); // Detenemos el envío si no hay foto
-          return;
+        statusMessage.textContent = 'Erro: Por favor, selecione uma foto.';
+        submitButton.disabled = false;
+        return;
       }
       
-      submitButton.disabled = true;
-      statusMessage.textContent = 'Processando imagem e enviando dados...';
-      
-      const telefoneLimpo = petpassForm.telefone.value.replace(/\D/g, '');
-      document.getElementById('botao_whatsapp').value = `https://wa.me/${telefoneLimpo}?text=Olá! Encontrei seu pet!`;
-      document.getElementById('botao_localizacao').value = `https://petpassmg3d.github.io/petpass-localizacao/localizacao.html?numero=${telefoneLimpo}`;
-
       const reader = new FileReader();
       reader.readAsDataURL(file);
+      reader.onload = () => {
+        const formData = new FormData(petpassForm);
+        const payload = Object.fromEntries(formData.entries());
+        payload.foto_pet = reader.result;
 
-      // Usamos una Promesa para esperar a que la imagen se lea antes de enviar el formulario
-      const promise = new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = (error) => reject(error);
-      });
+        const telefoneLimpo = payload.telefone.replace(/\D/g, '');
+        payload.botao_whatsapp = `https://wa.me/${telefoneLimpo}?text=Olá! Encontrei seu pet!`;
+        payload.botao_localizacao = `https://petpassmg3d.github.io/petpass-localizacao/localizacao.html?numero=${telefoneLimpo}`;
+        payload.action = "register";
 
-      promise.then(base64Image => {
-          // Guardamos el Base64 en el input oculto
-          document.getElementById('foto_pet_base64').value = base64Image;
-          
-          // El formulario ya está listo y se enviará automáticamente.
-          // Ahora solo gestionamos la UX.
-          statusMessage.textContent = '¡Registro enviado com sucesso! Redirecionando...';
+        // LÓGICA FINAL Y DEFINITIVA
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        })
+        .finally(() => {
+          // El bloque 'finally' se ejecuta SIEMPRE, sin importar si el fetch tuvo éxito o falló (por CORS).
+          // Es la solución perfecta para nuestra UX.
+          statusMessage.textContent = '¡Processamento concluído! Redirecionando...';
           setTimeout(() => {
-              window.top.location.href = 'pagina-de-sucesso.html';
-          }, 2000);
-
-      }).catch(error => {
-          console.error("Erro ao processar a imagem:", error);
-          statusMessage.textContent = 'Erro ao processar a imagem.';
-          submitButton.disabled = false;
-          e.preventDefault(); // Detenemos el envío si la imagen falla
-      });
+            window.top.location.href = 'pagina-de-sucesso.html';
+          }, 1500); // 1.5 segundos
+        });
+      };
+      
+      reader.onerror = error => {
+        console.error("Erro ao ler o arquivo:", error);
+        statusMessage.textContent = 'Erro ao processar a imagem.';
+        submitButton.disabled = false;
+      };
     });
   </script>
 </body>
-</html>

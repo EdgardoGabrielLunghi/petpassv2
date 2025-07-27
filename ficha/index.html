@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Carregando Ficha Pet Pass...</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+    </style>
+    <script>
+        (function() {
+            // 1. La URL base de tu aplicación de Google
+            const appsScriptBaseUrl = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec";
+
+            // 2. Obtenemos la ruta de la URL actual
+            // Ej: para ".../ficha/PP-12345", el pathname es "/petpassv2/ficha/PP-12345.html"
+            const path = window.location.pathname;
+            
+            // 3. Usamos una expresión regular para extraer el ID del nombre del archivo
+            const match = path.match(/\/ficha\/(PP-\d{5})\.html$/);
+
+            if (match && match[1]) {
+                const petId = match[1];
+                const destinationUrl = `${appsScriptBaseUrl}?id=${petId}`;
+                
+                // 4. Redirigimos a la URL de Google correcta
+                window.location.replace(destinationUrl);
+            } else {
+                // 5. Si la URL no tiene el formato correcto, mostramos un error
+                document.body.innerHTML = "<h1>Erro: ID de Pet Pass inválido na URL.</h1>";
+            }
+        })();
+    </script>
+</head>
+<body>
+    <p>Carregando a ficha do seu pet...</p>
+</body>
+</html>

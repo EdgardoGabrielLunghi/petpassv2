@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Acessar Ficha para Atualização</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Estilo autocontenido para minimizar dependencias */
+    body { font-family: 'Poppins', sans-serif; padding: 20px; background: #f0f4f8; margin: 0; }
+    header { text-align: center; margin-bottom: 20px; }
+    header img { max-width: 160px; margin-top: 10px; }
+    form { background: #fff; padding: 25px; border-radius: 12px; max-width: 500px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    input { width: 100%; padding: 12px; margin-bottom: 18px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    button { width: 100%; background-color: #007bff; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; font-family: 'Poppins', sans-serif; }
+    button:hover { background-color: #0056b3; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    h1 { text-align: center; color: #333; font-weight: 600; }
+    p { text-align: center; color: #555; line-height: 1.6; }
+    label { font-weight: 600; color: #444; margin-bottom: 5px; display: block; }
+    .status-message { text-align: center; font-weight: bold; margin-top: 20px; color: #d9534f; }
+    .status-message.success { color: #5cb85c; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="../logo_petpass.png" alt="Pet Pass Logo" />
+  </header>
+  <form id="verifyForm">
+    <h1>🔑 Atualizar Dados do Pet</h1>
+    <p>Para sua segurança, por favor, insira o número de série da chapinha e o email utilizado no registro.</p>
+    
+    <label for="numero_serie">Número de Série:</label>
+    <input type="text" id="numero_serie" name="numero_serie" required pattern="PP-\d{5}" title="O formato deve ser PP- seguido por 5 números (ex: PP-12345)" />
+    
+    <label for="email">Email de Registro:</label>
+    <input type="email" id="email" name="email" required />
+    
+    <button type="submit" id="submitButton">Verificar Identidade</button>
+    <div id="statusMessage" class="status-message"></div>
+  </form>
+  
+  <script>
+    const verifyForm = document.getElementById('verifyForm');
+    const submitButton = document.getElementById('submitButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMWQNFWH49eg_kxZkSbj2AvjGBRAkEUfBXDZQRqVnLoMdMOrW8cvJpsKqV5ZzRXQAL/exec"; // Asegúrate de que esta sea la URL final
+
+    verifyForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitButton.disabled = true;
+      statusMessage.textContent = 'Verificando...';
+      statusMessage.classList.remove('success');
+
+      const payload = {
+        action: 'verify',
+        numero_serie: verifyForm.numero_serie.value,
+        email: verifyForm.email.value
+      };
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.result === 'success') {
+          statusMessage.textContent = 'Verificação bem-sucedida! Redirecionando para edição...';
+          statusMessage.classList.add('success');
+          // Redirige a la página de edición, pasando el ID como parámetro en la URL
+          window.location.href = `editar.html?id=${payload.numero_serie}`;
+        } else {
+          statusMessage.textContent = `Erro: ${data.message || 'Dados inválidos.'}`;
+          submitButton.disabled = false;
+        }
+      })
+      .catch(err => {
+        console.error("Erro de comunicação:", err);
+        statusMessage.textContent = 'Erro de comunicação. Tente novamente mais tarde.';
+        submitButton.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>
